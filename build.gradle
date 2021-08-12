@@ -1,0 +1,78 @@
+import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
+
+plugins {
+    id 'java'
+
+    id 'org.springframework.boot' version "$springVersion"
+    id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
+
+    id 'com.github.johnrengelman.shadow' version "$shadowJarPluginVersion"
+}
+
+sourceCompatibility = '16'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.springframework.boot:spring-boot-starter-actuator:$springVersion"
+    implementation "org.springframework.boot:spring-boot-starter-web:$springVersion"
+    implementation "junit:junit:$junitVersion"
+
+    developmentOnly "org.springframework.boot:spring-boot-devtools:$springVersion"
+    testImplementation "org.springframework.boot:spring-boot-starter-test:$springVersion"
+}
+
+// provide a default class
+springBoot {
+    mainClass = "com.example.app.App1"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+shadowJar {
+    zip64 = true
+
+    mergeServiceFiles()
+    append 'META-INF/spring.handlers'
+    append 'META-INF/spring.schemas'
+    append 'META-INF/spring.tooling'
+    transform(PropertiesFileTransformer) {
+        paths = ['META-INF/spring.factories' ]
+        mergeStrategy = "append"
+    }
+}
+
+task shadowJarApp1(type: Jar) {
+    group = "shadow"
+    description = "Repackage initial shadowed archive to App1"
+    manifest {
+        attributes('Main-Class': 'com.example.app.App1')
+    }
+    from zipTree(shadowJar.archiveFile)
+
+    zip64 = true
+    archiveFileName.set("app1.jar")
+
+    dependsOn(shadowJar)
+}
+
+task shadowJarApp2(type: Jar) {
+    group = "shadow"
+    description = "Repackage initial shadowed archive to App2"
+    manifest {
+        attributes('Main-Class': 'com.example.app.App2')
+    }
+    from zipTree(shadowJar.archiveFile)
+
+    zip64 = true
+    archiveFileName.set("app2.jar")
+
+    dependsOn(shadowJar)
+}
+
+// produce App1 and App2 shadowed jars as part of the shadowJar task
+shadowJar.finalizedBy(shadowJarApp1, shadowJarApp2)
